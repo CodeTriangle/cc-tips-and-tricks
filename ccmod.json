@@ -5,5 +5,6 @@
 	"description": "An extensible framework for displaying mod-specific tips and tricks",
 	"repository": "https://github.com/CodeTriangle/cc-tips-and-tricks",
 	"tags": ["QoL"],
-	"authors": "CodeTriangle"
+	"authors": "CodeTriangle",
+	"plugin": "plugin.js"
 }
