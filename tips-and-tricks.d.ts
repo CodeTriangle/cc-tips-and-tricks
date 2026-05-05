@@ -62,6 +62,8 @@ declare global {
 
 			tipSequence: string[];
 
+			currentTip: Optional<TipsAndTricksModel.Data>;
+
 			titleGui: sc.TextGui;
 			bodyGui: sc.TextGui;
 			contributorGui: sc.TextGui;

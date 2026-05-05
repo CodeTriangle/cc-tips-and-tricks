@@ -173,6 +173,7 @@ export default class TipsAndTricks {
 			},
 
 			setTip(tip) {
+				this.currentTip = tip;
 				let height = 0;
 				if (tip.title) {
 					if (typeof tip.title == "string") {
@@ -223,6 +224,9 @@ export default class TipsAndTricks {
 			},
 
 			show() {
+				if (this.currentTip === undefined) {
+					this.cycleTip();
+				}
 				this.refreshTimer = this.refreshInterval;
 				this.titleGui.doStateTransition("DEFAULT", false, false, null, 0.075);
 				this.bodyGui.doStateTransition("DEFAULT");
