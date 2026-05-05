@@ -96,6 +96,7 @@ export default class TipsAndTricks {
 		codetriangle.tt.TipsAndTricksGui = ig.GuiElementBase.extend({
 			init(config) {
 				this.parent();
+				this.listeners = [];
 				this.refreshInterval = config?.refreshInterval ?? 5;
 				this.avoidShowingFor = config?.avoidShowingFor ?? 5;
 				this.titleGui = new sc.TextGui("", {font: sc.fontsystem.smallFont});
@@ -223,6 +224,10 @@ export default class TipsAndTricks {
 				}
 			},
 
+			addTipStateListener(listener) {
+				this.listeners.push(listener);
+			},
+
 			show() {
 				if (this.currentTip === undefined) {
 					this.cycleTip();
@@ -231,12 +236,18 @@ export default class TipsAndTricks {
 				this.titleGui.doStateTransition("DEFAULT", false, false, null, 0.075);
 				this.bodyGui.doStateTransition("DEFAULT");
 				this.contributorGui.doStateTransition("DEFAULT", false, false, null, 0.150);
+				for (const listener of this.listeners) {
+					listener.onTipGuiShow?.(this);
+				}
 			},
 
 			hide() {
 				this.titleGui.doStateTransition("HIDDEN");
 				this.bodyGui.doStateTransition("HIDDEN");
 				this.contributorGui.doStateTransition("HIDDEN");
+				for (const listener of this.listeners) {
+					listener.onTipGuiHide?.(this);
+				}
 			},
 
 			update() {
@@ -286,8 +297,30 @@ export default class TipsAndTricks {
 				this.parent();
 				this.tipsGui = new codetriangle.tt.TipsAndTricksGui();
 				this.tipsBoxGui = new sc.SlickBoxGui(this.tipsGui, false, 6, 2);
+				this.tipsBoxGui.hook.transitions = {
+					DEFAULT: {
+						state: {},
+						time: 0.25,
+						timeFunction: KEY_SPLINES.LINEAR,
+					},
+					HIDDEN: {
+						state: { alpha: 0 },
+						time: 0.25,
+						timeFunction: KEY_SPLINES.LINEAR,
+					}
+				}
 				this.tipsBoxGui.setPos(0, 3);
 				this.addChildGui(this.tipsBoxGui);
+				this.tipsGui.addTipStateListener(this);
+			},
+
+			onTipGuiShow(gui) {
+				this.tipsBoxGui.setContent(gui);
+				this.tipsBoxGui.doStateTransition("DEFAULT");
+			},
+
+			onTipGuiHide(gui) {
+				this.tipsBoxGui.doStateTransition("HIDDEN");
 			},
 
 			modelChanged(model: any, msg: number, data: any) {

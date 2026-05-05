@@ -52,9 +52,16 @@ declare global {
 				/// How many tips should we wait before showing the same tip?
 				avoidShowingFor?: number;
 			}
+
+			interface Listener {
+				onTipGuiShow(this: this, gui: TipsAndTricksGui);
+				onTipGuiHide(this: this, gui: TipsAndTricksGui);
+			}
 		}
 
 		interface TipsAndTricksGui extends ig.GuiElementBase, sc.Model.Observer {
+			listeners: TipsAndTricksGui.Listener[];
+
 			refreshInterval: number;
 			refreshTimer: number;
 
@@ -73,6 +80,8 @@ declare global {
 			setTip(this: this, tip: TipsAndTricksModel.Data): void;
 			setRandomTip(this: this): void;
 			cycleTip(this: this): void;
+
+			addTipStateListener(this: this, listener: TipsAndTricksGui.Listener): void;
 		}
 
 		interface TipsAndTricksGuiConstructor extends ImpactClass<TipsAndTricksGui> {
@@ -83,7 +92,7 @@ declare global {
 	}
 
 	namespace sc {
-		interface PauseScreenGui {
+		interface PauseScreenGui extends codetriangle.tt.TipsAndTricksGui.Listener {
 			tipsGui: codetriangle.tt.TipsAndTricksGui;
 			tipsBoxGui: sc.SlickBoxGui;
 			modelChanged: (this: this, model: any, msg: number, data: any) => void;
