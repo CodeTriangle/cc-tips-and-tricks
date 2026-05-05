@@ -185,6 +185,7 @@ export default class TipsAndTricks {
 					height += this.titleGui.hook.size.y;
 					this.bodyGui.hook.pos.y = 12;
 				} else {
+					this.titleGui.setText("");
 					this.bodyGui.hook.pos.y = 0;
 				}
 
@@ -202,7 +203,10 @@ export default class TipsAndTricks {
 						this.contributorGui.setText(ig.LangLabel.getText(tip.contributor));
 					}
 					height += this.contributorGui.hook.size.y;
+				} else {
+					this.contributorGui.setText("");
 				}
+
 				height -= 1;
 				this.hook.size.y = height;
 			},
