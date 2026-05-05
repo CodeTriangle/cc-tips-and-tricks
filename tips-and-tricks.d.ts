@@ -14,11 +14,13 @@ declare global {
 			}
 		}
 
-		interface TipsAndTricksModel extends ig.GameAddon, sc.Model {
+		interface TipsAndTricksModel extends ig.GameAddon, sc.Model, ig.Loadable.LoadListener<TipDatabase> {
 			tips: Map<string, TipsAndTricksModel.Data>;
+			tipDatabase: TipDatabase;
 			enabledTips: Set<string>;
 			tipStatusUpdatedCallbacks: ((tip) => void)[];
 			addTip(this: this, key: string, tip: TipsAndTricksModel.Data, enabled?: boolean);
+			addTips(this: this, tipObject: Record<string, TipsAndTricksModel.Data>): void;
 			setTipEnabled(this: this, key: string, enabled: boolean);
 			getRandomTip(this: this, ): TipsAndTricksModel.Data;
 		}
@@ -30,6 +32,16 @@ declare global {
 		var TipsAndTricksModel: TipsAndTricksModelConstructor;
 
 		var model: TipsAndTricksModel;
+
+		interface TipDatabase extends ig.JsonLoadable {
+			tips: Record<string, TipsAndTricksModel.Data>;
+		}
+
+		interface TipDatabaseConstructor extends ImpactClass<TipDatabase> {
+			new(): TipDatabase;
+		}
+
+		var TipDatabase: TipDatabaseConstructor;
 
 		namespace TipsAndTricksGui {
 			interface Config {

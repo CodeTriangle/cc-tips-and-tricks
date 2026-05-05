@@ -14,26 +14,38 @@ export default class TipsAndTricks {
 
 		codetriangle.tt.TipsAndTricksModel = ig.GameAddon.extend({
 			init() {
+				this.tipDatabase = new codetriangle.tt.TipDatabase();
+				this.tipDatabase.addLoadListener(this);
 				this.observers = [];
 				this.tips = new Map();
 				this.enabledTips = new Set();
+			},
 
-				for (let i = 0; i < 10; i++) {
-					this.addTip(`example1${i}`, {
-						title: "Example title",
-						body: `Example body ${i}`,
-						contributor: "Example contributor",
-					});
+			onLoadableComplete(success, db) {
+				if (!success) {
+					console.error("Tip database not loaded!");
 				}
+
+				this.addTips(db.tips);
 			},
 
 			addTip(key, tip, enabled) {
+				if (!this.tipDatabase.loaded) {
+					throw new Error("Additional tips cannot be added before the tip database is loaded (are you adding tips during prestart?");
+				}
+
 				if (this.tips.has(key)) {
 					throw new Error(`Tip already exists: ${key}`);
 				}
 				this.tips.set(key, tip);
 
 				this.setTipEnabled(key, enabled ?? true);
+			},
+
+			addTips(tipObject) {
+				for (const [key, tip] of Object.entries(tipObject)) {
+					this.addTip(key, tip);
+				}
 			},
 
 			setTipEnabled(key, enabled) {
@@ -60,6 +72,24 @@ export default class TipsAndTricks {
 						}
 					);
 				}
+			},
+		});
+
+		codetriangle.tt.TipDatabase = ig.JsonLoadable.extend({
+			cacheType: "Tips",
+
+			init() {
+				this.parent("data/tip-database.json");
+				this.tips = {};
+			},
+
+			getJsonPath() {
+				return this.path;
+			},
+
+			onload(data) {
+				// @ts-expect-error
+				this.tips = data;
 			},
 		});
 
@@ -145,16 +175,30 @@ export default class TipsAndTricks {
 			setTip(tip) {
 				let height = 0;
 				if (tip.title) {
-					this.titleGui.setText(tip.title);
+					if (typeof tip.title == "string") {
+						this.titleGui.setText(tip.title);
+					} else {
+						this.titleGui.setText(ig.LangLabel.getText(tip.title));
+					}
 					height += this.titleGui.hook.size.y;
 					this.bodyGui.hook.pos.y = 12;
 				} else {
 					this.bodyGui.hook.pos.y = 0;
 				}
-				this.bodyGui.setText(tip.body);
+
+				if (typeof tip.body == "string") {
+					this.bodyGui.setText(tip.body);
+				} else {
+					this.bodyGui.setText(ig.LangLabel.getText(tip.body));
+				}
+
 				height += this.bodyGui.hook.size.y;
 				if (tip.contributor) {
-					this.contributorGui.setText(tip.contributor);
+					if (typeof tip.contributor == "string") {
+						this.contributorGui.setText(tip.contributor);
+					} else {
+						this.contributorGui.setText(ig.LangLabel.getText(tip.contributor));
+					}
 					height += this.contributorGui.hook.size.y;
 				}
 				height -= 1;
