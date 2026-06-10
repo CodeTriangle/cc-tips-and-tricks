@@ -3,26 +3,32 @@ export {};
 declare global {
 	namespace codetriangle.tt {
 		enum TIP_MODEL_MESSAGE {
-			TIP_ENABLE_STATUS_CHANGED,
+			TIP_ADDED,
 		}
 
 		namespace TipsAndTricksModel {
+			type TextDataEntry = string | ig.LangLabel.Data;
+			type DataEntry = TextDataEntry | (() => TextDataEntry);
+
 			interface Data {
-				title?: string | ig.LangLabel.Data;
-				body: string | ig.LangLabel.Data;
-				contributor?: string | ig.LangLabel.Data;
+				title?: DataEntry;
+				body: DataEntry;
+				contributor?: DataEntry;
+				condition?: string | ig.VarCondition | (() => bool);
 			}
 		}
 
 		interface TipsAndTricksModel extends ig.GameAddon, sc.Model, ig.Loadable.LoadListener<TipDatabase> {
 			tips: Map<string, TipsAndTricksModel.Data>;
 			tipDatabase: TipDatabase;
-			enabledTips: Set<string>;
 			tipStatusUpdatedCallbacks: ((tip) => void)[];
-			addTip(this: this, key: string, tip: TipsAndTricksModel.Data, enabled?: boolean);
+
+			getLabel(entry: DataEntry): string;
+
+			addTip(this: this, key: string, tip: TipsAndTricksModel.Data);
 			addTips(this: this, tipObject: Record<string, TipsAndTricksModel.Data>): void;
-			setTipEnabled(this: this, key: string, enabled: boolean);
-			getRandomTip(this: this, ): TipsAndTricksModel.Data;
+
+			evaluateTipCondition(this: this, tip: TipsAndTricksModel.Data): boolean;
 		}
 
 		interface TipsAndTricksModelConstructor extends ImpactClass<TipsAndTricksModel> {
@@ -68,6 +74,7 @@ declare global {
 			avoidShowingFor: number;
 
 			tipSequence: string[];
+			shownTips: string[];
 
 			currentTip: Optional<TipsAndTricksModel.Data>;
 
@@ -78,7 +85,6 @@ declare global {
 			getSequenceValue(this: this): number;
 
 			setTip(this: this, tip: TipsAndTricksModel.Data): void;
-			setRandomTip(this: this): void;
 			cycleTip(this: this): void;
 
 			addTipStateListener(this: this, listener: TipsAndTricksGui.Listener): void;

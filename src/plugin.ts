@@ -9,7 +9,7 @@ export default class TipsAndTricks {
 		window.codetriangle.tt ??= {};
 
 		codetriangle.tt.TIP_MODEL_MESSAGE = {
-			TIP_ENABLE_STATUS_CHANGED: 0,
+			TIP_ADDED: 0,
 		}
 
 		codetriangle.tt.TipsAndTricksModel = ig.GameAddon.extend({
@@ -18,7 +18,6 @@ export default class TipsAndTricks {
 				this.tipDatabase.addLoadListener(this);
 				this.observers = [];
 				this.tips = new Map();
-				this.enabledTips = new Set();
 			},
 
 			onLoadableComplete(success, db) {
@@ -29,7 +28,19 @@ export default class TipsAndTricks {
 				this.addTips(db.tips);
 			},
 
-			addTip(key, tip, enabled) {
+			getLabel(entry) {
+				if (typeof entry == "function") {
+					entry = entry();
+				}
+
+				if (typeof entry == "string") {
+					return entry;
+				} else {
+					return ig.LangLabel.getText(entry);
+				}
+			},
+
+			addTip(key, tip) {
 				if (!this.tipDatabase.loaded) {
 					throw new Error("Additional tips cannot be added before the tip database is loaded (are you adding tips during prestart?");
 				}
@@ -37,9 +48,16 @@ export default class TipsAndTricks {
 				if (this.tips.has(key)) {
 					throw new Error(`Tip already exists: ${key}`);
 				}
+
 				this.tips.set(key, tip);
 
-				this.setTipEnabled(key, enabled ?? true);
+				sc.Model.notifyObserver(
+					this,
+					codetriangle.tt.TIP_MODEL_MESSAGE.TIP_ADDED,
+					{
+						key: key,
+					}
+				);
 			},
 
 			addTips(tipObject) {
@@ -48,30 +66,17 @@ export default class TipsAndTricks {
 				}
 			},
 
-			setTipEnabled(key, enabled) {
-				if (!this.tips.has(key)) {
-					throw new Error(`Tip does not exist: ${key}`);
+			evaluateTipCondition(tip) {
+				if (tip.condition === undefined) {
+					return true;
 				}
-
-				let send = false;
-				if (enabled && !this.enabledTips.has(key)) {
-					this.enabledTips.add(key);
-					send = true;
-				} else if (!enabled && this.enabledTips.has(key)) {
-					this.enabledTips.delete(key);
-					send = true;
+				if (typeof tip.condition == "function") {
+					return tip.condition();
 				}
-
-				if (send) {
-					sc.Model.notifyObserver(
-						this,
-						codetriangle.tt.TIP_MODEL_MESSAGE.TIP_ENABLE_STATUS_CHANGED,
-						{
-							key: key,
-							enabled: enabled,
-						}
-					);
+				if (typeof tip.condition == "string") {
+					tip.condition = new ig.VarCondition(tip.condition);
 				}
+				return tip.condition.evaluate();
 			},
 		});
 
@@ -151,7 +156,7 @@ export default class TipsAndTricks {
 				this.bodyGui.doStateTransition("HIDDEN", true);
 				this.contributorGui.doStateTransition("HIDDEN", true);
 
-				this.tipSequence = Array.from(codetriangle.tt.model.enabledTips);
+				this.tipSequence = Array.from(codetriangle.tt.model.tips.keys());
 				// shuffle the array
 				for (let i = 0; i < this.tipSequence.length; i++) {
 					let ridx = Math.floor(Math.random() * this.tipSequence.length);
@@ -160,28 +165,22 @@ export default class TipsAndTricks {
 					this.tipSequence[i] = this.tipSequence[ridx];
 					this.tipSequence[ridx] = tmp;
 				}
-				this.cycleTip();
+				// this.cycleTip();
+
+				this.shownTips = [];
 
 				sc.Model.addObserver(codetriangle.tt.model, this);
 			},
 
 			getSequenceValue() {
-				if (this.tipSequence.length <= this.avoidShowingFor + 1) {
-					return this.tipSequence.length;
-				} else {
-					return Math.floor(Math.random() * (this.tipSequence.length - this.avoidShowingFor)) + this.avoidShowingFor;
-				}
+				return Math.floor(Math.random() * this.tipSequence.length);
 			},
 
 			setTip(tip) {
 				this.currentTip = tip;
 				let height = 0;
 				if (tip.title) {
-					if (typeof tip.title == "string") {
-						this.titleGui.setText(tip.title);
-					} else {
-						this.titleGui.setText(ig.LangLabel.getText(tip.title));
-					}
+					this.titleGui.setText(codetriangle.tt.model.getLabel(tip.title));
 					height += this.titleGui.hook.size.y;
 					this.bodyGui.hook.pos.y = 12;
 				} else {
@@ -189,19 +188,11 @@ export default class TipsAndTricks {
 					this.bodyGui.hook.pos.y = 0;
 				}
 
-				if (typeof tip.body == "string") {
-					this.bodyGui.setText(tip.body);
-				} else {
-					this.bodyGui.setText(ig.LangLabel.getText(tip.body));
-				}
+				this.bodyGui.setText(codetriangle.tt.model.getLabel(tip.body));
 
 				height += this.bodyGui.hook.size.y;
 				if (tip.contributor) {
-					if (typeof tip.contributor == "string") {
-						this.contributorGui.setText(tip.contributor);
-					} else {
-						this.contributorGui.setText(ig.LangLabel.getText(tip.contributor));
-					}
+					this.contributorGui.setText(codetriangle.tt.model.getLabel(tip.contributor));
 					height += this.contributorGui.hook.size.y;
 				} else {
 					this.contributorGui.setText("");
@@ -211,21 +202,49 @@ export default class TipsAndTricks {
 				this.hook.size.y = height;
 			},
 
-			setRandomTip() {
-				this.setTip(codetriangle.tt.model.getRandomTip());
-			},
-
 			cycleTip() {
-				const prevTip = this.tipSequence.shift();
-				if (prevTip) {
-					const idx = this.getSequenceValue();
-					this.tipSequence.splice(idx, 0, prevTip);
+				// slide the first tip off the front
+				const prevTipName = this.tipSequence.shift();
+				if (prevTipName) {
+					// then slide it onto the back of the previously shown tips
+					this.shownTips.push(prevTipName);
+					// if the backbuffer of tips we should avoid showing is too long...
+					if (this.shownTips.length >= this.avoidShowingFor) {
+						// get a random index
+						const idx = this.getSequenceValue();
+						// get the first tip from the backbuffer and add it to the sequence
+						this.tipSequence.splice(idx, 0, this.shownTips.shift()!);
+					}
 				}
 
-				const nextTip = codetriangle.tt.model.tips.get(this.tipSequence[0]);
-				if (nextTip) {
-					this.setTip(nextTip);
+				// scan through the sequence of tips for a tip that can be shown
+				for (let idx = 0; idx < this.tipSequence.length; idx++) {
+					const nextTip = codetriangle.tt.model.tips.get(this.tipSequence[idx]);
+					if (nextTip && codetriangle.tt.model.evaluateTipCondition(nextTip)) {
+						this.setTip(nextTip);
+						// get all of the elements we scanned through before finding our candidate...
+						const scannedElements = this.tipSequence.splice(0, idx);
+						// and push them to the end of the sequence
+						this.tipSequence.splice(this.tipSequence.length, 0, ...scannedElements);
+						return;
+					}
 				}
+
+				// if we get here, there are no eligible tips in the sequence.
+				// instead, we will raid the already recently shown tips.
+				for (let idx = 0; idx < this.shownTips.length; idx++) {
+					const nextTip = codetriangle.tt.model.tips.get(this.shownTips[idx]);
+					if (nextTip && codetriangle.tt.model.evaluateTipCondition(nextTip)) {
+						this.setTip(nextTip);
+						// get this element...
+						const scannedElements = this.shownTips.splice(idx, 1);
+						// and push it to the start of the tip sequence
+						this.tipSequence.splice(0, 0, ...scannedElements);
+						return;
+					}
+				}
+
+				// if we get all the way here then oh well. guess it didn't work. so don't change it.
 			},
 
 			addTipStateListener(listener) {
@@ -275,20 +294,10 @@ export default class TipsAndTricks {
 
 			modelChanged(model, message, data) {
 				if (model == codetriangle.tt.model) {
-					if (message == codetriangle.tt.TIP_MODEL_MESSAGE.TIP_ENABLE_STATUS_CHANGED) {
+					if (message == codetriangle.tt.TIP_MODEL_MESSAGE.TIP_ADDED) {
 						let key: string = (data as any).key;
-						let enabled: string = (data as any).enabled;
-						if (enabled) {
-							// if we are enabling a new key, then add it to a random place in the list...
-							let ridx = this.getSequenceValue();
-							this.tipSequence.splice(ridx, 0, key);
-						} else {
-							// otherwise, remove it
-							let idx = this.tipSequence.findIndex(v => v == key);
-							if (idx != -1) {
-								this.tipSequence.splice(idx, 1);
-							}
-						}
+						let ridx = this.getSequenceValue();
+						this.tipSequence.splice(ridx, 0, key);
 					}
 				}
 			},
