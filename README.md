@@ -7,7 +7,7 @@ in the top-left of the pause screen,
 which cycles between mod-defined tips,
 an example of which you can see here:
 
-https://github.com/user-attachments/assets/6f3d11fc-c5fa-4ce7-b80e-c9b01f6d8fd6
+https://github.com/user-attachments/assets/2b133bef-4e1c-4ab8-b906-10c081c98b11
 
 ### Adding tips from your mod
 
