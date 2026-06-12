@@ -174,7 +174,7 @@ export default class TipsAndTricks {
 			},
 
 			getSequenceValue() {
-				return Math.floor(Math.random() * this.tipSequence.length);
+				return Math.floor(Math.sqrt(Math.random()) * (this.tipSequence.length + 1));
 			},
 
 			setTip(tip) {
