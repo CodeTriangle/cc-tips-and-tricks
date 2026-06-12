@@ -1,10 +1,7 @@
 {
 	"codetriangle.tt.moddable": {
-		"title": "Modular tip menu",
-		"body": "This is a versatile tips and tricks menu that can be extended by mods!",
+		"title": "Modular tip GUI",
+		"body": "This is a versatile tips and tricks GUI that can be extended by mods!",
 		"contributor": "CodeTriangle"
-	},
-	"codetriangle.tt.short": {
-		"body": "This menu will resize to the size of the tip."
 	}
 }
