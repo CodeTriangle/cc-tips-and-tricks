@@ -105,7 +105,7 @@ export default class TipsAndTricks {
 				this.refreshInterval = config?.refreshInterval ?? 5;
 				this.avoidShowingFor = config?.avoidShowingFor ?? 5;
 				this.titleGui = new sc.TextGui("", {font: sc.fontsystem.smallFont});
-				this.bodyGui = new sc.TextGui("", {font: sc.fontsystem.font, maxWidth: config?.width ?? 220});
+				this.bodyGui = new sc.TextGui("", {font: sc.fontsystem.smallFont, maxWidth: config?.width ?? 220});
 				this.contributorGui = new sc.TextGui("", {font: sc.fontsystem.tinyFont});
 				this.setSize(config?.width ?? 220, this.titleGui.hook.size.y + this.bodyGui.hook.size.y + this.contributorGui.hook.size.y + 1);
 
@@ -145,6 +145,7 @@ export default class TipsAndTricks {
 					},
 				};
 
+				this.titleGui.setAlign(ig.GUI_ALIGN.X_CENTER, ig.GUI_ALIGN.Y_TOP);
 				this.bodyGui.setAlign(ig.GUI_ALIGN.X_CENTER, ig.GUI_ALIGN.Y_TOP);
 				this.contributorGui.setAlign(ig.GUI_ALIGN.X_RIGHT, ig.GUI_ALIGN.Y_BOTTOM);
 
@@ -180,9 +181,9 @@ export default class TipsAndTricks {
 				this.currentTip = tip;
 				let height = 0;
 				if (tip.title) {
-					this.titleGui.setText(codetriangle.tt.model.getLabel(tip.title));
+					this.titleGui.setText("\\c[3]" + codetriangle.tt.model.getLabel(tip.title) + "\\c[0]");
 					height += this.titleGui.hook.size.y;
-					this.bodyGui.hook.pos.y = 12;
+					this.bodyGui.hook.pos.y = 14;
 				} else {
 					this.titleGui.setText("");
 					this.bodyGui.hook.pos.y = 0;
@@ -198,7 +199,7 @@ export default class TipsAndTricks {
 					this.contributorGui.setText("");
 				}
 
-				height -= 1;
+				height += 1;
 				this.hook.size.y = height;
 			},
 
